@@ -1,0 +1,10 @@
+{
+  "headers": [
+    {
+      "source": "/coi-worker.js",
+      "headers": [
+        { "key": "Content-Type", "value": "application/javascript" }
+      ]
+    }
+  ]
+}
