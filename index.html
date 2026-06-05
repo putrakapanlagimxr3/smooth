@@ -3,51 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultra Smooth Engine - Vercel Ready</title>
+    <title>Ultra Smooth Engine</title>
     
-    <!-- COI Service Worker - Mandatory untuk FFmpeg.wasm -->
+    <!-- COI Service Worker Registration -->
     <script>
-        (function() {
-            // Register COI service worker
-            if (!window.crossOriginIsolated && 'serviceWorker' in navigator) {
-                const coiWorkerCode = `
-                    self.addEventListener('fetch', (event) => {
-                        const url = new URL(event.request.url);
-                        if (url.pathname === '/' || event.request.mode === 'navigate') {
-                            event.respondWith(
-                                fetch(event.request).then(response => {
-                                    const newHeaders = new Headers(response.headers);
-                                    newHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
-                                    newHeaders.set('Cross-Origin-Embedder-Policy', 'require-corp');
-                                    return new Response(response.body, {
-                                        status: response.status,
-                                        statusText: response.statusText,
-                                        headers: newHeaders
-                                    });
-                                })
-                            );
-                        }
-                    });
-                    self.addEventListener('install', () => self.skipWaiting());
-                    self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
-                `;
-                
-                const blob = new Blob([coiWorkerCode], { type: 'application/javascript' });
-                const workerUrl = URL.createObjectURL(blob);
-                
-                navigator.serviceWorker.register(workerUrl, { scope: './' })
-                    .then(() => window.location.reload())
-                    .catch(err => console.error('COI worker failed:', err));
-            }
-        })();
+        if ('serviceWorker' in navigator && !window.crossOriginIsolated) {
+            navigator.serviceWorker.register('./coi-worker.js', { scope: './' })
+                .then(() => {
+                    console.log('COI worker registered, reloading...');
+                    window.location.reload();
+                })
+                .catch(err => console.error('COI worker failed:', err));
+        }
     </script>
     
-    <!-- FFmpeg CDN -->
+    <!-- FFmpeg -->
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.0/dist/ffmpeg.min.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #0f172a, #1e1b4b);
@@ -57,7 +31,6 @@
             align-items: center;
             padding: 20px;
         }
-        
         .card {
             background: rgba(255,255,255,0.05);
             backdrop-filter: blur(12px);
@@ -67,7 +40,6 @@
             width: 100%;
             border: 1px solid rgba(255,255,255,0.1);
         }
-        
         h1 {
             font-size: 1.8rem;
             background: linear-gradient(90deg, #fff, #0A84FF);
@@ -76,13 +48,11 @@
             color: transparent;
             margin-bottom: 8px;
         }
-        
         .sub {
             color: #8e8e93;
             margin-bottom: 24px;
             font-size: 0.85rem;
         }
-        
         .upload-area {
             border: 2px dashed rgba(10,132,255,0.5);
             border-radius: 20px;
@@ -92,12 +62,10 @@
             transition: 0.3s;
             margin-bottom: 20px;
         }
-        
         .upload-area:hover {
             border-color: #0A84FF;
             background: rgba(10,132,255,0.05);
         }
-        
         .file-info {
             background: rgba(0,0,0,0.3);
             border-radius: 14px;
@@ -105,12 +73,7 @@
             margin-bottom: 20px;
             display: none;
         }
-        
-        .file-info span {
-            color: #0A84FF;
-            font-weight: 600;
-        }
-        
+        .file-info span { color: #0A84FF; font-weight: 600; }
         select {
             width: 100%;
             padding: 14px;
@@ -122,7 +85,6 @@
             margin: 15px 0 20px;
             cursor: pointer;
         }
-        
         button {
             width: 100%;
             padding: 16px;
@@ -135,43 +97,12 @@
             cursor: pointer;
             transition: 0.3s;
         }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(10,132,255,0.3);
-        }
-        
-        button:disabled {
-            opacity: 0.5;
-            transform: none;
-        }
-        
-        .progress {
-            display: none;
-            margin-top: 20px;
-        }
-        
-        .progress-bar {
-            height: 6px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        
-        .progress-fill {
-            width: 0%;
-            height: 100%;
-            background: #0A84FF;
-            transition: width 0.3s;
-        }
-        
-        .status {
-            margin-top: 16px;
-            font-size: 0.85rem;
-            color: #8e8e93;
-            text-align: center;
-        }
-        
+        button:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(10,132,255,0.3); }
+        button:disabled { opacity: 0.5; transform: none; }
+        .progress { display: none; margin-top: 20px; }
+        .progress-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+        .progress-fill { width: 0%; height: 100%; background: #0A84FF; transition: width 0.3s; }
+        .status { margin-top: 16px; font-size: 0.85rem; color: #8e8e93; text-align: center; }
         .loader {
             display: inline-block;
             width: 14px;
@@ -182,10 +113,7 @@
             animation: spin 0.8s linear infinite;
             margin-right: 8px;
         }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -214,9 +142,7 @@
     <button id="processBtn">🚀 Process Video</button>
     
     <div class="progress" id="progressBox">
-        <div class="progress-bar">
-            <div class="progress-fill" id="progressFill"></div>
-        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
     </div>
     <div class="status" id="status"></div>
 </div>
@@ -238,26 +164,23 @@
     const progressFill = document.getElementById('progressFill');
     const statusDiv = document.getElementById('status');
     
-    // Load FFmpeg - Vercel friendly
     async function loadFFmpeg() {
         statusDiv.innerHTML = '<span class="loader"></span> Loading FFmpeg engine...';
         
         try {
             const { createFFmpeg } = FFmpeg;
             
-            // Gunakan CDN yang paling stabil
+            // COI already active via service worker
             ffmpeg = createFFmpeg({ 
                 corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.0/dist/ffmpeg-core.js',
                 log: false 
             });
             
             ffmpeg.setProgress(({ ratio }) => {
-                const percent = Math.round(ratio * 100);
-                progressFill.style.width = percent + '%';
+                progressFill.style.width = Math.round(ratio * 100) + '%';
             });
             
             await ffmpeg.load();
-            
             isReady = true;
             statusDiv.innerHTML = '✅ Engine ready! Upload your video.';
             
@@ -265,31 +188,25 @@
             console.error(err);
             statusDiv.innerHTML = '❌ Failed to load engine. ' + err.message;
             
-            // Fallback ke CDN lain
+            // Fallback ke versi 0.10.0
             try {
-                statusDiv.innerHTML = '<span class="loader"></span> Trying alternative CDN...';
+                const { createFFmpeg } = FFmpeg;
                 ffmpeg = createFFmpeg({ 
-                    corePath: 'https://unpkg.com/@ffmpeg/core@0.12.0/dist/ffmpeg-core.js',
+                    corePath: 'https://unpkg.com/@ffmpeg/core@0.10.0/dist/ffmpeg-core.js',
                     log: false 
                 });
                 await ffmpeg.load();
                 isReady = true;
                 statusDiv.innerHTML = '✅ Engine ready! Upload your video.';
-            } catch (err2) {
-                statusDiv.innerHTML = '❌ Failed to load engine. Check your connection and refresh.';
+            } catch(err2) {
+                statusDiv.innerHTML = '❌ Failed to load engine. Try refreshing the page.';
             }
         }
     }
     
-    // Upload handlers
     uploadArea.addEventListener('click', () => fileInput.click());
-    uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadArea.style.borderColor = '#0A84FF';
-    });
-    uploadArea.addEventListener('dragleave', () => {
-        uploadArea.style.borderColor = 'rgba(10,132,255,0.5)';
-    });
+    uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.style.borderColor = '#0A84FF'; });
+    uploadArea.addEventListener('dragleave', () => { uploadArea.style.borderColor = 'rgba(10,132,255,0.5)'; });
     uploadArea.addEventListener('drop', (e) => {
         e.preventDefault();
         uploadArea.style.borderColor = 'rgba(10,132,255,0.5)';
@@ -320,20 +237,11 @@
         video.src = URL.createObjectURL(file);
     }
     
-    // Process video
     async function processVideo() {
-        if (!isReady) {
-            statusDiv.innerHTML = '⏳ Engine still loading. Please wait...';
-            return;
-        }
-        
-        if (!selectedFile) {
-            statusDiv.innerHTML = '⚠️ Please select a video first!';
-            return;
-        }
+        if (!isReady) { statusDiv.innerHTML = '⏳ Engine still loading...'; return; }
+        if (!selectedFile) { statusDiv.innerHTML = '⚠️ Please select a video first!'; return; }
         
         const targetFps = smoothLevel.value;
-        
         statusDiv.innerHTML = `🎬 Processing with ${targetFps} fps interpolation...`;
         processBtn.disabled = true;
         progressBox.style.display = 'block';
@@ -342,10 +250,7 @@
         try {
             const { fetchFile } = FFmpeg;
             
-            statusDiv.innerHTML = `📥 Loading video...`;
             await ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(selectedFile));
-            
-            statusDiv.innerHTML = `🎞️ Interpolating to ${targetFps} fps... This may take a while.`;
             
             await ffmpeg.run(
                 '-i', 'input.mp4',
@@ -359,7 +264,6 @@
                 'output.mp4'
             );
             
-            statusDiv.innerHTML = `📀 Reading output...`;
             const data = await ffmpeg.FS('readFile', 'output.mp4');
             const blob = new Blob([data.buffer], { type: 'video/mp4' });
             const url = URL.createObjectURL(blob);
@@ -372,7 +276,6 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            // Cleanup
             await ffmpeg.FS('unlink', 'input.mp4');
             await ffmpeg.FS('unlink', 'output.mp4');
             
@@ -389,8 +292,6 @@
     }
     
     processBtn.addEventListener('click', processVideo);
-    
-    // Start
     loadFFmpeg();
 </script>
 </body>
