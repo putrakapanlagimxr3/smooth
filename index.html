@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultra Smooth Engine - QUANTUM</title>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.10.0/dist/ffmpeg.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e1b4b);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(12px);
+            border-radius: 28px;
+            padding: 28px;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, #fff, #0A84FF);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 8px;
+        }
+        
+        .sub {
+            color: #8e8e93;
+            margin-bottom: 24px;
+            font-size: 0.85rem;
+        }
+        
+        .upload-area {
+            border: 2px dashed rgba(10,132,255,0.5);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area:hover {
+            border-color: #0A84FF;
+            background: rgba(10,132,255,0.05);
+        }
+        
+        .file-info {
+            background: rgba(0,0,0,0.3);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .file-info span {
+            color: #0A84FF;
+            font-weight: 600;
+        }
+        
+        .smooth-level {
+            margin-bottom: 24px;
+        }
+        
+        .smooth-level label {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        select {
+            width: 100%;
+            padding: 14px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        
+        select option {
+            background: #1e1b4b;
+        }
+        
+        button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #0A84FF, #5E5CE6);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(10,132,255,0.3);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            transform: none;
+            cursor: not-allowed;
+        }
+        
+        .progress {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: #0A84FF;
+            transition: width 0.3s;
+            box-shadow: 0 0 10px #0A84FF;
+        }
+        
+        .status {
+            margin-top: 16px;
+            font-size: 0.85rem;
+            color: #8e8e93;
+            text-align: center;
+        }
+        
+        .loader {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #0A84FF;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>✨ Ultra Smooth Engine</h1>
+    <div class="sub">Frame Interpolation • Motion Smoothing</div>
+    
+    <div class="upload-area" id="uploadArea">
+        📁 Click or Drag Video Here
+        <input type="file" id="fileInput" accept="video/*" style="display:none">
+    </div>
+    
+    <div class="file-info" id="fileInfo">
+        📹 <span id="fileName">-</span><br>
+        📐 <span id="videoRes">-</span> | ⏱️ <span id="videoDur">-</span>
+    </div>
+    
+    <div class="smooth-level">
+        <label>Smoothness Level</label>
+        <select id="smoothLevel">
+            <option value="1">🥈 Mild (30 fps) - Quick</option>
+            <option value="2" selected>🥇 Medium (60 fps) - Recommended</option>
+            <option value="3">🏆 Extreme (120 fps) - Best Quality, Slower</option>
+        </select>
+    </div>
+    
+    <button id="processBtn">🚀 Process Video</button>
+    
+    <div class="progress" id="progressBox">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+    <div class="status" id="status"></div>
+</div>
+
+<script>
+    // ============================================
+    // ULTRA SMOOTH ENGINE - STANDALONE
+    // Frame Interpolation via FFmpeg
+    // ============================================
+    
+    let ffmpeg = null;
+    let isReady = false;
+    let selectedFile = null;
+    
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const videoRes = document.getElementById('videoRes');
+    const videoDur = document.getElementById('videoDur');
+    const smoothLevel = document.getElementById('smoothLevel');
+    const processBtn = document.getElementById('processBtn');
+    const progressBox = document.getElementById('progressBox');
+    const progressFill = document.getElementById('progressFill');
+    const statusDiv = document.getElementById('status');
+    
+    // FPS mapping based on smoothness level
+    const fpsMap = {
+        '1': '30',
+        '2': '60',
+        '3': '120'
+    };
+    
+    // Load FFmpeg
+    async function loadFFmpeg() {
+        statusDiv.innerHTML = '<span class="loader"></span> Loading FFmpeg engine...';
+        
+        const CDNS = [
+            'https://unpkg.com/@ffmpeg/core@0.10.0/dist/ffmpeg-core.js',
+            'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.10.0/dist/ffmpeg-core.js',
+            'https://unpkg.com/@ffmpeg/core@0.9.0/dist/ffmpeg-core.js'
+        ];
+        
+        const { createFFmpeg } = FFmpeg;
+        
+        for (let i = 0; i < CDNS.length; i++) {
+            try {
+                ffmpeg = createFFmpeg({
+                    corePath: CDNS[i],
+                    log: false
+                });
+                
+                ffmpeg.setProgress(({ ratio }) => {
+                    const percent = Math.round(ratio * 100);
+                    progressFill.style.width = percent + '%';
+                });
+                
+                await ffmpeg.load();
+                isReady = true;
+                statusDiv.innerHTML = '✅ Engine ready! Upload your video.';
+                return;
+            } catch(e) {
+                console.log(`CDN ${i+1} failed, trying next...`);
+            }
+        }
+        
+        statusDiv.innerHTML = '❌ Failed to load engine. Check your connection.';
+    }
+    
+    // Handle file upload
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = '#0A84FF';
+    });
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.style.borderColor = 'rgba(10,132,255,0.5)';
+    });
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = 'rgba(10,132,255,0.5)';
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('video/')) {
+            handleFile(file);
+        }
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files[0]) handleFile(e.target.files[0]);
+    });
+    
+    function handleFile(file) {
+        selectedFile = file;
+        fileName.innerText = file.name;
+        
+        // Get video metadata
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+            URL.revokeObjectURL(video.src);
+            videoRes.innerText = video.videoWidth + 'x' + video.videoHeight;
+            const duration = Math.round(video.duration);
+            const minutes = Math.floor(duration / 60);
+            const seconds = duration % 60;
+            videoDur.innerText = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+            fileInfo.style.display = 'block';
+        };
+        video.src = URL.createObjectURL(file);
+        
+        statusDiv.innerHTML = '✅ Video loaded. Ready to process!';
+    }
+    
+    // Process video with smooth interpolation
+    async function processVideo() {
+        if (!isReady) {
+            statusDiv.innerHTML = '⏳ Please wait, engine still loading...';
+            return;
+        }
+        
+        if (!selectedFile) {
+            statusDiv.innerHTML = '⚠️ Please select a video first!';
+            return;
+        }
+        
+        const targetFps = fpsMap[smoothLevel.value];
+        statusDiv.innerHTML = `🎬 Processing with ${targetFps} fps interpolation...`;
+        processBtn.disabled = true;
+        progressBox.style.display = 'block';
+        progressFill.style.width = '0%';
+        
+        try {
+            const { fetchFile } = FFmpeg;
+            
+            // Write input file
+            ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(selectedFile));
+            
+            // Apply smooth interpolation: increase frame rate with motion interpolation
+            // Using minterpolate filter for smooth motion
+            await ffmpeg.run(
+                '-i', 'input.mp4',
+                '-filter:v', `minterpolate=fps=${targetFps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1`,
+                '-c:v', 'libx264',
+                '-preset', 'medium',
+                '-crf', '18',
+                '-c:a', 'copy',
+                '-movflags', '+faststart',
+                'output.mp4'
+            );
+            
+            // Read output
+            const data = ffmpeg.FS('readFile', 'output.mp4');
+            const blob = new Blob([data.buffer], { type: 'video/mp4' });
+            const url = URL.createObjectURL(blob);
+            
+            // Download
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'smooth_' + selectedFile.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // Cleanup
+            ffmpeg.FS('unlink', 'input.mp4');
+            ffmpeg.FS('unlink', 'output.mp4');
+            
+            statusDiv.innerHTML = '✅ Done! Video downloaded.';
+            processBtn.disabled = false;
+            progressBox.style.display = 'none';
+            
+        } catch(err) {
+            console.error(err);
+            statusDiv.innerHTML = '❌ Processing failed: ' + err.message;
+            processBtn.disabled = false;
+            progressBox.style.display = 'none';
+        }
+    }
+    
+    processBtn.addEventListener('click', processVideo);
+    
+    // Start loading
+    loadFFmpeg();
+</script>
+</body>
+</html>
